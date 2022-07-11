@@ -1,55 +1,86 @@
 const express = require("express");
 const app = express();
 const port = 1515;
+const connection = require("../database/database");
+const Books = require("../models/books");
+
+
+connection.authenticate().then(console.log("conexao com DB realizada"))
+.catch((error) => console.log("erro " + error + " ao conectar com DB"));
 
 app.use(express.json());
 
-let books = [];
 
 app.post("/books", (req, res) => {
 
-    const {id, title, author, publishedAt} = req.body;
-    const book = {id, title, author, publishedAt};
-    books.push(book);
-    return res.status(201).json(book);
+    const {title, author, publishedAt} = req.body;
+    const book = {title, author, publishedAt};
+    Books.create({
+        title: book.title,
+        author: book.author,
+        publishedAt: book.publishedAt
+    }).then(res.status(201).json(book))
+    .catch((error) => {
+        res.status(500).json("erro " + error + " ao inserir no Banco de dados");
+    })
+    
 
 });
 
 app.get("/books", (req, res) => {
-    return res.status(200).json(books);
+
+    Books.findAll().then((books) => {
+        res.status(200).json(books);
+    });
 });
 
 app.get("/books/:book_id", (req, res) => {
     const {book_id} = req.params;
-    const book = books.find((item) => item.id === book_id);
-    if(!book) { 
-        return res.status(404).json("not found");
+
+    if(isNaN(book_id)) {
+        return res.status(400).json("sintaxe invalida, passe um numero como id!");
+    } else {
+            Books.findByPk(book_id).then((book) => {
+            if(!book) { 
+                return res.status(404).json("not found");
+            } else {
+                res.status(200).json(book);
+            }
+        });
     }
-    return res.status(200).json(book);
+    
 });
 
 
 app.delete("/books/:book_id", (req, res) => {
+
     const {book_id} = req.params;
-    const filteredBooks = books.filter((item) => item.id != book_id);
-    books = filteredBooks;
-    return  res.status(200).json("deleted");
+    Books.destroy({
+        where: {
+            id: book_id
+        }
+    }).then(() => {
+        return  res.status(200).json("deleted");
+    }).catch((error) => {
+        res.status(500);
+    });
+       
+
 });
 
 
 
 app.patch("/books/:book_id", (req, res) => {
-    const {book_id} = req.params;
+    const id = req.params.book_id;
     const {title,author, publishedAt} = req.body;
-    const book = books.find((item) => item.id === book_id);
-    console.log(book)
-    
-    book.author = author ? author : book.author;
-    book.title = title ? title : book.title;
-    book.publishedAt = publishedAt ? publishedAt : book.publishedAt;
-
-    return res.status(200).json(book);
-    
+    console.log(id)
+    Books.update({
+        title: title,
+    }, {where : { id : id}}).then(() => {
+        return res.status(200);
+    }).catch((error) => {
+        res.status(500);
+    });
 
 });
 
