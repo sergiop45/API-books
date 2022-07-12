@@ -71,16 +71,27 @@ app.delete("/books/:book_id", (req, res) => {
 
 
 app.patch("/books/:book_id", (req, res) => {
-    const id = req.params.book_id;
-    const {title,author, publishedAt} = req.body;
-    console.log(id)
+    const {book_id} = req.params;
+    let {title,author, publishedAt} = req.body;
+    
+   Books.findOne({where: {id: book_id}}).then((item) => {
+    if(title == undefined) {
+        title = item.title;
+    }
+    if(author == undefined) {
+        author = item.author;
+    }
+    if(publishedAt == undefined) {
+        publishedAt = item.publishedAt;
+    }
+
     Books.update({
         title: title,
-    }, {where : { id : id}}).then(() => {
-        return res.status(200);
-    }).catch((error) => {
-        res.status(500);
-    });
+        author: author,
+        publishedAt: publishedAt
+    }, {where: {id: book_id}})
+   }).then( res.status(201).json("Alterado com sucesso!"))
+   .catch((error) => res.status(500).json("Erro ao alterar!Tente novamente"));
 
 });
 
